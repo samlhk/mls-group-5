@@ -37,8 +37,3 @@ The course consists of 10 weeks of lectures and Q&A sessions. Each week has the 
 - **Q&A Sessions**: Focused on solving problems, demos, and discussing task-related questions.
 
 The full course schedule is available [here](https://browser.ted.is.ed.ac.uk/generate/?courses%5B%5D=INFR11269_SS1_SEM2&period=SEM2&week=26-37).
-
-## Course Schedule
-
-The course runs for 10 weeks, with lectures, demos, and Q&A sessions. For the full schedule, check out the official 
-The full course schedule is available [here](https://browser.ted.is.ed.ac.uk/generate/?courses%5B%5D=INFR11269_SS1_SEM2&period=SEM2&week=26-37).
