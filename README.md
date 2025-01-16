@@ -10,9 +10,9 @@ The full course schedule, assessments, and additional details are available in t
 
 ## Repository Structure
 
-- **task-1**: Homework 1 – Implementing a machine learning operator with Triton.
-- **task-2**: Homework 2 – Integrating the operator into a distributed ML system (ServerlessLLM + RAG).
-- **resources**: Slides and reading materials related to the course.
+- [**Task-1**](./task-1): Homework 1, Implementing a machine learning operator with Triton.
+- [**Task-2**](./task-2): Homework 2, Integrating the operator into a distributed ML system (ServerlessLLM + RAG).
+- [**Resources**](./resources): Slides and reading materials related to the course.
 
 ---
 
