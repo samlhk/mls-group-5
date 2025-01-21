@@ -4,6 +4,12 @@ On the head node:
 
 First and foremost, install Conda. We recommend using [Miniconda](https://docs.anaconda.com/miniconda/install/). The teaching cluster is using Ubuntu Linux. Please follow the **Linux installation guidelines**.
 
+After conda is initialized, create a `~/.bash_profile` file and write the contents below so that your `~/.bashrc` will run when you ssh log in:
+```bash
+if [ -f ~/.bashrc ]; then
+  . ~/.bashrc
+fi
+```
 Then run:
 ```bash
 git clone https://github.com/ed-aisys/edin-mls-25-spring.git
