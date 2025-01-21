@@ -45,7 +45,6 @@ To run the demo in batch mode, first create a Bash script (e.g., `test.sh`) with
 #!/bin/bash
 source ~/miniconda3/bin/activate
 conda activate mlsys
-cd edin-mls-25-spring/pytorch-demo
 python demo.py
 ```
 
