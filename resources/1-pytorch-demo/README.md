@@ -13,7 +13,7 @@ fi
 Then run:
 ```bash
 git clone https://github.com/ed-aisys/edin-mls-25-spring.git
-cd edin-mls-25-spring/pytorch-demo
+cd edin-mls-25-spring/resources/1-pytorch-demo
 conda create -n mlsys python=3.10 -y
 conda activate mlsys
 pip install -r requirements.txt
