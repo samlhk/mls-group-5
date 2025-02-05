@@ -16,24 +16,20 @@ Implement distance functions for two vectors in cupy/torch/triton.
 There are four distinct types of distance, so the implementation of four separate functions:
 
 **Cosine distance:**:
-$$
-d(X, Y) = 1 - \frac{X \cdot Y}{\|X\| \|Y\|}
-$$
+
+$d(X, Y) = 1 - \frac{X \cdot Y}{\|X\| \|Y\|}$
 
 **L2 distance:**:
-$$
-d(X, Y) = \sqrt{\sum_{i=1}^D (X_i - Y_i)^2}
-$$
+
+$d(X, Y) = \sqrt{\sum_{i=1}^D (X_i - Y_i)^2}$
 
 **Dot product:**:
-$$
-d(X, Y) = X \cdot Y
-$$
+
+$d(X, Y) = X \cdot Y$
 
 **Manhattan(L1) distance:**:
-$$
-d(X, Y) = \sum_{i=1}^D |X_i - Y_i|
-$$
+
+$d(X, Y) = \sum_{i=1}^D |X_i - Y_i|$
 
 ### Part 1.2: Top-K with GPU
 
@@ -47,17 +43,17 @@ Identify the K nearest vectors within a set of vectors.
 -  K: Top K
 
 **Output:**
--  Result[K, D]: The top K nearest vectors
+-  Result[K]: The top K nearest vectors ID (index of the vector in A)
 
 ### Report
 
-In the Task 1 report, you are required to address the following questions:  
+In the Task 1 report, you are required to answer the following questions:
 
-- How did you implement four distinct distance functions on the GPU?  
-- What is the speed advantage of the GPU over the CPU version when the dimension is 2? Additionally, what is the speed advantage when the dimension is 2^15?  
-- Please provide a detailed description of your Top K algorithm.  
-- What steps did you undertake to implement the Top K on the GPU? How do you manage data within GPU memory?  
-- When processing 4,000 vectors, how many seconds does the operation take? Furthermore, when handling 4,000,000 vectors, what modifications did you implement to ensure the effective functioning of your code?
+1. How did you implement four distinct distance functions on the GPU?  
+2. What is the speed advantage of the GPU over the CPU version when the dimension is 2? Additionally, what is the speed advantage when the dimension is 2^15?  
+3. Please provide a detailed description of your Top K algorithm.  
+4. What steps did you undertake to implement the Top K on the GPU? How do you manage data within GPU memory?  
+5. When processing 4,000 vectors, how many seconds does the operation take? Furthermore, when handling 4,000,000 vectors, what modifications did you implement to ensure the effective functioning of your code?
 
 
 ## Part 2: KMeans and ANN
@@ -98,7 +94,7 @@ In this task we only use L2 distance and cosine similarity.
 -  K: number of clusters
 
 **Output:**
--  R[N]: cluster ID for each vector
+-  Result[N]: cluster ID for each vector
 
 ### Part 2.2: ANN
 
@@ -126,16 +122,42 @@ If the recall rate exceeds 70% across all data, we consider your result to be co
 -  N: Number of vectors
 -  D: Dimension of vectors
 -  A[N, D]: A collection of vectors
--  K: number of clusters
+-  X: A specified vector
+-  K: Top K
 
 **Output:**
--  R[N]: cluster ID for each vector
+-  Result[K]: The top K nearest vectors ID (index of the vector in A)
+
 
 ### Report
 
-In the Task 2 report, you are required to address the following questions:  
+In the Task 2 report, you are required to answer the following questions:  
 
-- How did you implement your K-means algorithm on the GPU?  
-- What is the speed advantage of the GPU over the CPU version when the dimension is 2? Additionally, what is the speed advantage when the dimension is 1024?  
-- Please provide a detailed description of your ANN algorithm.  
-- If you implemented another clustering algorithm/ANN algorithm, which algorithm did you use?
+1. How did you implement your K-means algorithm on the GPU?  
+2. What is the speed advantage of the GPU over the CPU version when the dimension is 2? Additionally, what is the speed advantage when the dimension is 1024?  
+3. Please provide a detailed description of your ANN algorithm.  
+4. If you implemented another clustering algorithm/ANN algorithm, which algorithm did you use?
+
+## Other aspects for the report
+
+You can write a report by discussing from the following aspects:
+
+1. Implementation Analysis
+   - Describe your implementation approach on GPU
+   - Include code snippets and explain key optimization techniques used
+   - Discuss any challenges encountered and how they were resolved
+
+2. Performance Comparison
+   - Conduct benchmarking tests comparing GPU vs CPU(numpy) implementations
+   - Present results in a table/figure showing execution times and speedup ratios
+   - Analyze the factors contributing to performance differences
+
+3. Scalability Analysis
+   - Benchmark performance with small number of vectors
+     * Report execution time and resource utilization (e.g. GPU memory usage/GPU utilization if you can measure it)
+   - Scale testing to large number of vectors
+     * Document optimization techniques used
+     * Compare performance before and after optimizations
+     * Analyze memory usage and bottlenecks
+
+Your report should include relevant charts, tables and metrics to support your analysis. Focus on quantitative results and technical insights gained from the implementation.
