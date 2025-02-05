@@ -28,11 +28,11 @@ For more details on different system, use the following links:
 
 ## Examples
 
-- Example 0: Vector add (./0-vector-examples)
-- Example 1: Streams (./1-stream-examples)
-- Example 2: Memory hierarchy (./2-hirachy-memory)
-- Example 3: Triton (./3-triton)
-- Example 4: GEMM benchmark (./4-gemm-benchmark)
+- [Example 0: Vector add](./0-vector-examples)
+- [Example 1: Streams](./1-stream-examples)
+- [Example 2: Memory hierarchy](./2-hirachy-memory)
+- [Example 3: Triton](./3-triton)
+- [Example 4: GEMM benchmark](./4-gemm-benchmark)
 
 ## References and further reading
 
@@ -53,7 +53,6 @@ For more details on different system, use the following links:
 - [NVIDIA/cuda-samples](https://github.com/NVIDIA/cuda-samples)
 - [An Even Easier Introduction to CUDA | NVIDIA Technical Blog](https://developer.nvidia.com/blog/even-easier-introduction-cuda/)
 - [CUDA Programming Guide](https://www.cs.utexas.edu/~rossbach/cs380p/papers/cuda-programming.pdf)
-- 
 - [HMUNACHI/cuda-repo: From zero to hero CUDA for accelerating maths and machine learning on GPU.](https://github.com/HMUNACHI/cuda-repo)
 
 ### Triton
