@@ -10,10 +10,14 @@ The full course schedule, assessments, and additional details are available in t
 
 ## Repository Structure
 
-- [**Task-1**](./task-1): Homework 1, Implementing a machine learning operator with Triton.
-- [**Task-2**](./task-2): Homework 2, Integrating the operator into a distributed ML system (ServerlessLLM + RAG).
+- [**Task-1**](./task-1): Part 1, Implementing a machine learning operator with Triton.
+- [**Task-2**](./task-2): Part 2, Integrating the operator into a distributed ML system (ServerlessLLM + RAG).
 - [**Resources**](./resources): Slides and reading materials related to the course.
 
+---
+
+## Last Update
+- **[05/02/2025]** We have uploaded the code template for the first part of the assessment into the `task-1` folder. Additionally, we have relocated the `pytorch-demo` to the `resources` directory and have included materials for `gpu-programming` in the same directory. The part 1 specification in under the `Assessment` section on Learn.
 ---
 
 ## Course Tasks
