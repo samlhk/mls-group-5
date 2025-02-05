@@ -10,7 +10,7 @@ The full course schedule, assessments, and additional details are available in t
 
 ## Repository Structure
 
-- [**Task-1**](./task-1): Part 1, Implementing a machine learning operator with Triton.
+- [**Task-1**](./task-1): Part 1, Implementing machine learning operators with GPU programming.
 - [**Task-2**](./task-2): Part 2, Integrating the operator into a distributed ML system (ServerlessLLM + RAG).
 - [**Resources**](./resources): Slides and reading materials related to the course.
 
