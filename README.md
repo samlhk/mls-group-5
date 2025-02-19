@@ -1,3 +1,28 @@
+# Machine learning Systems Group 5
+
+As GitHub doens't allow forked repositories to be private, this is a mirror of the original repository with its upstream set to it.
+
+To check the remote:
+```
+git remote -v
+```
+
+You should see:
+```
+origin	git@github.com:samlhk/mls-group-5.git (fetch)
+origin	git@github.com:samlhk/mls-group-5.git (push)
+upstream	git@github.com:ed-aisys/edin-mls-25-spring.git (fetch)
+upstream	DISABLE (push)
+```
+
+To fetch and merge changes from the original repo:
+```
+git fetch upstream
+git merge upstream/main
+git push origin main
+```
+
+
 # Machine Learning Systems - 2024/2025
 
 Welcome to the repository for the **Machine Learning Systems** course (INFR11269) for the **2024/2025** academic year. This course focuses on building and deploying machine learning systems, with hands-on programming tasks, paper writing, and peer reviews.

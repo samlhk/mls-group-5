@@ -14,10 +14,49 @@ from test import testdata_kmeans, testdata_knn, testdata_ann
 #     pass
 
 def distance_cosine(X, Y):
-    pass
+    start = time.time()
+
+    # distance = 1 - np.dot(X, Y) / np.sqrt(sum(pow(element, 2) for element in X)) / np.sqrt(sum(pow(element, 2) for element in Y))
+
+    X = cp.asarray(X)
+    Y = cp.asarray(Y)
+    l2norm_kernel = cp.ReductionKernel(
+        'T x',  # input params
+        'T y',  # output params
+        'x * x',  # map
+        'a + b',  # reduce
+        'y = sqrt(a)',  # post-reduction map
+        '0',  # identity value
+        'l2norm'  # kernel name
+    )
+    distance = 1 - cp.dot(X, Y) / l2norm_kernel(X) / l2norm_kernel(Y)
+    cp.cuda.Stream.null.synchronize()
+
+    print(f'time elapsed: {time.time() - start}s')
+    return distance
+    
 
 def distance_l2(X, Y):
-    pass
+    start = time.time()
+
+    # distance = np.sqrt(np.sum((X - Y) ** 2))
+
+    X = cp.asarray(X)
+    Y = cp.asarray(Y)
+    l2norm_kernel = cp.ReductionKernel(
+        'T x',  # input params
+        'T y',  # output params
+        'x * x',  # map
+        'a + b',  # reduce
+        'y = sqrt(a)',  # post-reduction map
+        '0',  # identity value
+        'l2norm'  # kernel name
+    )
+    distance = l2norm_kernel(X - Y)
+    cp.cuda.Stream.null.synchronize()
+
+    print(f'time elapsed: {time.time() - start}s')
+    return distance
 
 def distance_dot(X, Y):
     pass
@@ -83,4 +122,9 @@ def recall_rate(list1, list2):
     return len(set(list1) & set(list2)) / len(list1)
 
 if __name__ == "__main__":
-    test_kmeans()
+    # test_kmeans()
+    np.random.seed(47)
+    a = np.random.randn(10000000)
+    b = np.random.randn(10000000)
+    print(distance_cosine(a, b))
+    print(distance_l2(a, b))
