@@ -14,9 +14,8 @@ from test import testdata_kmeans, testdata_knn, testdata_ann
 #     pass
 
 def distance_cosine(X, Y):
-    start = time.time()
 
-    # distance = 1 - np.dot(X, Y) / np.sqrt(sum(pow(element, 2) for element in X)) / np.sqrt(sum(pow(element, 2) for element in Y))
+    return 1 - np.dot(X, Y) / np.sqrt(np.sum(np.square(X))) / np.sqrt(np.sum(np.square(Y)))
 
     X = cp.asarray(X)
     Y = cp.asarray(Y)
@@ -32,14 +31,12 @@ def distance_cosine(X, Y):
     distance = 1 - cp.dot(X, Y) / l2norm_kernel(X) / l2norm_kernel(Y)
     cp.cuda.Stream.null.synchronize()
 
-    print(f'time elapsed: {time.time() - start}s')
     return distance
     
 
 def distance_l2(X, Y):
-    start = time.time()
 
-    # distance = np.sqrt(np.sum((X - Y) ** 2))
+    # return np.sqrt(np.sum((X - Y) ** 2))
 
     X = cp.asarray(X)
     Y = cp.asarray(Y)
@@ -55,14 +52,35 @@ def distance_l2(X, Y):
     distance = l2norm_kernel(X - Y)
     cp.cuda.Stream.null.synchronize()
 
-    print(f'time elapsed: {time.time() - start}s')
     return distance
 
 def distance_dot(X, Y):
-    pass
+
+    # return np.dot(X, Y)
+
+    X = cp.asarray(X)
+    Y = cp.asarray(Y)
+    return cp.dot(X, Y)
 
 def distance_manhattan(X, Y):
-    pass
+    
+    # return np.sum(np.abs(X - Y))
+
+    X = cp.asarray(X)
+    Y = cp.asarray(Y)
+    l2norm_kernel = cp.ReductionKernel(
+        'T x',  # input params
+        'T y',  # output params
+        'abs(x)',  # map
+        'a + b',  # reduce
+        'y = a',  # post-reduction map
+        '0',  # identity value
+        'l2norm'  # kernel name
+    )
+    distance = l2norm_kernel(X - Y)
+    cp.cuda.Stream.null.synchronize()
+
+    return distance
 
 # ------------------------------------------------------------------------------------------------
 # Your Task 1.2 code here
@@ -123,8 +141,18 @@ def recall_rate(list1, list2):
 
 if __name__ == "__main__":
     # test_kmeans()
-    np.random.seed(47)
+
+    # warm up
     a = np.random.randn(10000000)
     b = np.random.randn(10000000)
-    print(distance_cosine(a, b))
-    print(distance_l2(a, b))
+    distance_cosine(a, b)
+
+    times = np.array([])
+    for i in range(10):
+        a = np.random.randn(32768)
+        b = np.random.randn(32768)
+        start = time.time()
+        distance_cosine(a, b)
+        times = np.append(times, time.time() - start)
+    
+    print(f'average time: {times.mean()}')
