@@ -15,21 +15,21 @@ from test import testdata_kmeans, testdata_knn, testdata_ann
 
 def distance_cosine(X, Y):
 
-    return 1 - np.dot(X, Y) / np.sqrt(sum(pow(element, 2) for element in X)) / np.sqrt(sum(pow(element, 2) for element in Y))
+    return 1 - np.dot(X, Y) / np.sqrt(np.sum(np.square(X))) / np.sqrt(np.sum(np.square(Y)))
 
-    # X = cp.asarray(X)
-    # Y = cp.asarray(Y)
-    # l2norm_kernel = cp.ReductionKernel(
-    #     'T x',  # input params
-    #     'T y',  # output params
-    #     'x * x',  # map
-    #     'a + b',  # reduce
-    #     'y = sqrt(a)',  # post-reduction map
-    #     '0',  # identity value
-    #     'l2norm'  # kernel name
-    # )
-    # distance = 1 - cp.dot(X, Y) / l2norm_kernel(X) / l2norm_kernel(Y)
-    # cp.cuda.Stream.null.synchronize()
+    X = cp.asarray(X)
+    Y = cp.asarray(Y)
+    l2norm_kernel = cp.ReductionKernel(
+        'T x',  # input params
+        'T y',  # output params
+        'x * x',  # map
+        'a + b',  # reduce
+        'y = sqrt(a)',  # post-reduction map
+        '0',  # identity value
+        'l2norm'  # kernel name
+    )
+    distance = 1 - cp.dot(X, Y) / l2norm_kernel(X) / l2norm_kernel(Y)
+    cp.cuda.Stream.null.synchronize()
 
     return distance
     
@@ -56,7 +56,7 @@ def distance_l2(X, Y):
 
 def distance_dot(X, Y):
 
-    return np.dot(X, Y)
+    # return np.dot(X, Y)
 
     X = cp.asarray(X)
     Y = cp.asarray(Y)
@@ -145,14 +145,14 @@ if __name__ == "__main__":
     # warm up
     a = np.random.randn(10000000)
     b = np.random.randn(10000000)
-    distance_manhattan(a, b)
+    distance_cosine(a, b)
 
     times = np.array([])
     for i in range(10):
         a = np.random.randn(32768)
         b = np.random.randn(32768)
         start = time.time()
-        distance_manhattan(a, b)
+        distance_cosine(a, b)
         times = np.append(times, time.time() - start)
     
     print(f'average time: {times.mean()}')
