@@ -1,3 +1,4 @@
+import torch
 import cupy as cp
 import time
 import sys
