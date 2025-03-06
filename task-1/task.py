@@ -4,6 +4,7 @@ import triton
 import numpy as np
 import time
 import json
+import matplotlib.pyplot as plt
 from test import testdata_kmeans, testdata_knn, testdata_ann
 # ------------------------------------------------------------------------------------------------
 # Your Task 1.1 code here
@@ -13,12 +14,10 @@ from test import testdata_kmeans, testdata_knn, testdata_ann
 # def distance_kernel(X, Y, D):
 #     pass
 
-def distance_cosine(X, Y):
-
+def distance_cosine_cpu(X, Y):
     return 1 - np.dot(X, Y) / np.sqrt(np.sum(np.square(X))) / np.sqrt(np.sum(np.square(Y)))
 
-    X = cp.asarray(X)
-    Y = cp.asarray(Y)
+def distance_cosine(X, Y):
     l2norm_kernel = cp.ReductionKernel(
         'T x',  # input params
         'T y',  # output params
@@ -32,14 +31,12 @@ def distance_cosine(X, Y):
     cp.cuda.Stream.null.synchronize()
 
     return distance
-    
+
+def distance_l2_cpu(X, Y):
+    return np.sqrt(np.sum((X - Y) ** 2))    
+
 
 def distance_l2(X, Y):
-
-    # return np.sqrt(np.sum((X - Y) ** 2))
-
-    X = cp.asarray(X)
-    Y = cp.asarray(Y)
     l2norm_kernel = cp.ReductionKernel(
         'T x',  # input params
         'T y',  # output params
@@ -51,23 +48,20 @@ def distance_l2(X, Y):
     )
     distance = l2norm_kernel(X - Y)
     cp.cuda.Stream.null.synchronize()
-
     return distance
 
+
+def distance_dot_cpu(X, Y):
+    return np.dot(X, Y)
+
 def distance_dot(X, Y):
-
-    # return np.dot(X, Y)
-
-    X = cp.asarray(X)
-    Y = cp.asarray(Y)
     return cp.dot(X, Y)
 
-def distance_manhattan(X, Y):
-    
-    # return np.sum(np.abs(X - Y))
 
-    X = cp.asarray(X)
-    Y = cp.asarray(Y)
+def distance_manhattan_cpu(X, Y):
+    return np.sum(np.abs(X - Y))
+
+def distance_manhattan(X, Y):
     l2norm_kernel = cp.ReductionKernel(
         'T x',  # input params
         'T y',  # output params
@@ -79,7 +73,6 @@ def distance_manhattan(X, Y):
     )
     distance = l2norm_kernel(X - Y)
     cp.cuda.Stream.null.synchronize()
-
     return distance
 
 # ------------------------------------------------------------------------------------------------
@@ -88,8 +81,14 @@ def distance_manhattan(X, Y):
 
 # You can create any kernel here
 
+def our_knn_cpu(N, D, A, X, K):
+    return np.argsort(distance_cosine_cpu(A, X))[:K]
+
 def our_knn(N, D, A, X, K):
-    pass
+    A = cp.asarray(A)
+    X = cp.asarray(X)
+    distances = cp.array([distance_cosine(A[i], X) for i in range(A.shape[0])])
+    return cp.argsort(distances)[:K]
 
 # ------------------------------------------------------------------------------------------------
 # Your Task 2.1 code here
@@ -100,7 +99,24 @@ def our_knn(N, D, A, X, K):
 #     pass
 
 def our_kmeans(N, D, A, K):
-    pass
+    max_i = 10
+    A = cp.asarray(A)
+    # intialise centroids
+    centroids = A[cp.random.choice(N, K, replace=False)]
+    for _ in range(max_i):
+        # assign
+        distances = cp.linalg.norm(A[:, None, :] - centroids[None, :, :], axis=2)  # (N, K)
+        labels = cp.argmin(distances, axis=1)  # Shape (N,)
+
+        # update
+        new_centroids = cp.array([A[labels == k].mean(axis=0) for k in range(K)])
+
+        # check if centroids are no longer moving significantly?
+        # something something
+        
+        centroids = new_centroids
+
+    return labels
 
 # ------------------------------------------------------------------------------------------------
 # Your Task 2.2 code here
@@ -117,12 +133,17 @@ def our_ann(N, D, A, X, K):
 
 # Example
 def test_kmeans():
-    N, D, A, K = testdata_kmeans("test_file.json")
+    N, D, A, K = testdata_kmeans("")
     kmeans_result = our_kmeans(N, D, A, K)
     print(kmeans_result)
 
+def test_knn_cpu():
+    N, D, A, X, K = testdata_knn("")
+    knn_result = our_knn_cpu(N, D, A, X, K)
+    # print(knn_result)
+
 def test_knn():
-    N, D, A, X, K = testdata_knn("test_file.json")
+    N, D, A, X, K = testdata_knn("")
     knn_result = our_knn(N, D, A, X, K)
     print(knn_result)
     
@@ -142,17 +163,43 @@ def recall_rate(list1, list2):
 if __name__ == "__main__":
     # test_kmeans()
 
-    # warm up
-    a = np.random.randn(10000000)
-    b = np.random.randn(10000000)
-    distance_cosine(a, b)
+    start = time.time()
+    test_kmeans()
+    print(time.time() - start)
 
-    times = np.array([])
-    for i in range(10):
-        a = np.random.randn(32768)
-        b = np.random.randn(32768)
+    # warm up
+    '''for _ in range(10):
+        test_knn()
+
+    times = []
+    for i in range(50):
         start = time.time()
-        distance_cosine(a, b)
-        times = np.append(times, time.time() - start)
+        test_knn()
+        times.append(time.time() - start)
+        if i % 10 == 0:
+            print(time.time() - start)
+    # plt.plot([i for i in range(50)], times, label='gpu')
+    print(f"cp avg: {sum(times) / len(times)}")
     
-    print(f'average time: {times.mean()}')
+    times = []
+    for i in range(50):
+        start = time.time()
+        test_knn_cpu()
+        times.append(time.time() - start)
+        if i % 10 == 0:
+            print(time.time() - start)
+    print(f"np avg: {sum(times) / len(times)}")'''
+
+    #plt.legend()
+    #plt.show()
+    
+
+    # times = np.array([])
+    # for i in range(10):
+    #     a = np.random.randn(32768)
+    #     b = np.random.randn(32768)
+    #     start = time.time()
+    #     distance_cosine(a, b)
+    #     times = np.append(times, time.time() - start)
+    
+    # print(f'average time: {times.mean()}')
