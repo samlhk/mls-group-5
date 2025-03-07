@@ -9,6 +9,11 @@ A FastAPI-based Retrieval-Augmented Generation (RAG) service that combines docum
 ```bash
 conda create -n rag python=3.10 -y
 conda activate rag
+```
+
+```bash
+git clone https://github.com/ed-aisys/edin-mls-25-spring.git
+cd edin-mls-25-spring/task-2
 pip install -r requirements.txt
 ```
 
