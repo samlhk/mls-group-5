@@ -6,6 +6,8 @@ A FastAPI-based Retrieval-Augmented Generation (RAG) service that combines docum
 
 1. Create a conda environment with the requirements.txt file
 
+TIP: Check [this example](https://github.com/ServerlessLLM/ServerlessLLM/blob/main/docs/stable/getting_started/slurm_setup.md) for how to use slurm to create a conda environment.
+
 ```bash
 conda create -n rag python=3.10 -y
 conda activate rag
