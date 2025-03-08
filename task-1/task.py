@@ -6,6 +6,10 @@ import time
 import json
 import matplotlib.pyplot as plt
 from test import testdata_kmeans, testdata_knn, testdata_ann
+
+np.random.seed(47)
+cp.random.seed(47)
+
 # ------------------------------------------------------------------------------------------------
 # Your Task 1.1 code here
 # ------------------------------------------------------------------------------------------------
@@ -127,7 +131,7 @@ def our_kmeans(N, D, A, K):
     Output:
         Result[N]: cluster ID for each vector
     '''
-    max_iterations = 100
+    max_iterations = 10
     A = cp.asarray(A)
     result = cp.zeros(N, dtype=int)
     new_result = cp.zeros(N, dtype=int)
@@ -135,9 +139,9 @@ def our_kmeans(N, D, A, K):
     centroids = A[cp.random.choice(N, K, replace=False)]
     for _ in range(max_iterations):
         # assign
-        for idx, a in enumerate(A):
-            distances = cp.array([distance_cosine(a, centroid) for centroid in centroids])
-            new_result[idx] = cp.argmin(distances)
+        # TODO directly applying distance_cosine(A, centroid) is efficient but currently doesn't work for distance_l2 for some reason, needs fixing
+        distances = cp.array([distance_cosine(A, centroid) for centroid in centroids]).T
+        new_result = cp.argmin(distances, axis=1)
 
         # convergence?
         if cp.all(new_result == result):
@@ -148,7 +152,8 @@ def our_kmeans(N, D, A, K):
         for idx, _ in enumerate(centroids):
             centroids[idx] = cp.mean(A[result == idx], axis=0)
 
-    return result
+    # TODO this should only return results but we also need the centroids from kmeans so it's here for now
+    return result, centroids
 
 '''def kmeans(N, D, A, K, max_iters=100, tolerance=1e-4):
     # Initialize
@@ -187,7 +192,20 @@ def our_kmeans(N, D, A, K):
 # You can create any kernel here
 
 def our_ann(N, D, A, X, K):
-    pass
+    A = cp.asarray(A)
+    X = cp.asarray(X)
+    k1 = 5
+    k2 = 100
+    clusters, centroids = our_kmeans(N, D, A, K)
+    k1_cluster_centers = our_knn(K, D, centroids, X, k1)
+    candidates = cp.array([], dtype=cp.int32)
+    for cluster_id in k1_cluster_centers:
+        cluster_vectors_ids = [id for id, cid in enumerate(clusters) if cid == cluster_id]
+        closest_vectors_ids = our_knn(len(cluster_vectors_ids), D, A[cluster_vectors_ids], centroids[cluster_id], k2)
+        cluster_vectors_ids = cp.asarray(cluster_vectors_ids)
+        candidates = cp.append(candidates, cluster_vectors_ids[closest_vectors_ids])
+    return candidates[our_knn(len(candidates), D, A[candidates], X, K)]
+
 
 # ------------------------------------------------------------------------------------------------
 # Test your code here
@@ -195,24 +213,26 @@ def our_ann(N, D, A, X, K):
 
 # Example
 def test_kmeans():
-    N, D, A, K = testdata_kmeans("")
-    kmeans_result = test_kmeans(N, D, A, K)
+    N, D, A, K = testdata_kmeans("test.json")
+    kmeans_result = our_kmeans(N, D, A, K)
     print(kmeans_result)
 
 def test_knn_cpu():
-    N, D, A, X, K = testdata_knn("")
+    N, D, A, X, K = testdata_knn("test.json")
     knn_result = our_knn_cpu(N, D, A, X, K)
-    # print(knn_result)
+    print(knn_result)
 
 def test_knn():
-    N, D, A, X, K = testdata_knn("")
+    N, D, A, X, K = testdata_knn("test.json")
     knn_result = our_knn(N, D, A, X, K)
     print(knn_result)
+    return knn_result
     
 def test_ann():
-    N, D, A, X, K = testdata_ann("test_file.json")
+    N, D, A, X, K = testdata_ann("test.json")
     ann_result = our_ann(N, D, A, X, K)
     print(ann_result)
+    return ann_result
     
 def recall_rate(list1, list2):
     """
@@ -223,11 +243,21 @@ def recall_rate(list1, list2):
     return len(set(list1) & set(list2)) / len(list1)
 
 if __name__ == "__main__":
+    # start = time.time()
     # test_kmeans()
+    # print(time.time() - start)
 
     start = time.time()
-    test_kmeans()
-    print(time.time() - start)
+    knn = test_knn()
+    cp.cuda.Device().synchronize()
+    print(f'time elapsed for knn: {time.time() - start}')
+
+    start = time.time()
+    ann = test_ann()
+    cp.cuda.Device().synchronize()
+    print(f'time elapsed for ann: {time.time() - start}')
+
+    print(f"recall: {recall_rate(knn.tolist(), ann.tolist())}")
 
     # warm up
     '''for _ in range(10):
