@@ -11,7 +11,7 @@ The full course schedule, assessments, and additional details are available in t
 ## Repository Structure
 
 - [**Task-1**](./task-1): Part 1, Implementing machine learning operators with GPU programming.
-- [**Task-2**](./task-2): Part 2, Integrating the operator into a distributed ML system (ServerlessLLM + RAG).
+- [**Task-2**](./task-2): Part 2, Integrating the operator into an end-to-end RAG serving pipeline.
 - [**Resources**](./resources): Slides and reading materials related to the course.
 
 ---
