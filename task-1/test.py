@@ -1,6 +1,8 @@
 import numpy as np
 import json
 
+np.random.seed(47)
+
 def read_data(file_path=""):
     """
     Read data from a file
