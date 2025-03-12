@@ -39,21 +39,25 @@ def distance_cosine(X, Y):
 def distance_l2_cpu(X, Y):
     return np.sqrt(np.sum((X - Y) ** 2))    
 
-
 def distance_l2(X, Y):
-    l2norm_kernel = cp.ReductionKernel(
-        'T x',  # input params
-        'T y',  # output params
-        'x * x',  # map
-        'a + b',  # reduce
-        'y = sqrt(a)',  # post-reduction map
-        '0',  # identity value
-        'l2norm'  # kernel name
-    )
-    distance = l2norm_kernel(X - Y)
-    cp.cuda.Stream.null.synchronize()
-    return distance
-
+    if X.ndim > 1 and Y.ndim == 1:
+        # Batched calculation: distances between each row in X and vector Y
+        diff = X - Y 
+        return cp.sqrt(cp.sum(diff * diff, axis=1))
+    else:
+        # Original single vector calculation
+        l2norm_kernel = cp.ReductionKernel(
+            'T x',  # input params
+            'T y',  # output params
+            'x * x',  # map
+            'a + b',  # reduce
+            'y = sqrt(a)',  # post-reduction map
+            '0',  # identity value
+            'l2norm'  # kernel name
+        )
+        distance = l2norm_kernel(X - Y)
+        cp.cuda.Stream.null.synchronize()
+        return distance
 
 def distance_dot_cpu(X, Y):
     return np.dot(X, Y)
@@ -66,7 +70,7 @@ def distance_manhattan_cpu(X, Y):
     return np.sum(np.abs(X - Y))
 
 def distance_manhattan(X, Y):
-    l2norm_kernel = cp.ReductionKernel(
+    manhattan_kernel = cp.ReductionKernel(
         'T x',  # input params
         'T y',  # output params
         'abs(x)',  # map
@@ -75,7 +79,7 @@ def distance_manhattan(X, Y):
         '0',  # identity value
         'l2norm'  # kernel name
     )
-    distance = l2norm_kernel(X - Y)
+    distance = manhattan_kernel(X - Y)
     cp.cuda.Stream.null.synchronize()
     return distance
 
@@ -91,7 +95,7 @@ def our_knn_cpu(N, D, A, X, K):
 def our_knn(N, D, A, X, K):
     A = cp.asarray(A)
     X = cp.asarray(X)
-    distances = cp.array([distance_cosine(A[i], X) for i in range(A.shape[0])])
+    distances = distance_l2(A, X)
     return cp.argsort(distances)[:K]
 
 # ------------------------------------------------------------------------------------------------
@@ -140,7 +144,10 @@ def our_kmeans(N, D, A, K):
     for _ in range(max_iterations):
         # assign
         # TODO directly applying distance_cosine(A, centroid) is efficient but currently doesn't work for distance_l2 for some reason, needs fixing
-        distances = cp.array([distance_cosine(A, centroid) for centroid in centroids]).T
+        distances = cp.zeros((N, K))
+        for k in range(K):
+            # Vectorized distance calculation between all points and current centroid
+            distances[:, k] = distance_l2(A, centroids[k])
         new_result = cp.argmin(distances, axis=1)
 
         # convergence?
