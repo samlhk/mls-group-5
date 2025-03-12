@@ -6,9 +6,10 @@ import time
 import json
 import matplotlib.pyplot as plt
 from test import testdata_kmeans, testdata_knn, testdata_ann
+from concurrent.futures import ThreadPoolExecutor
 
-np.random.seed(47)
-cp.random.seed(47)
+# np.random.seed(47)
+# cp.random.seed(47)
 
 # ------------------------------------------------------------------------------------------------
 # Your Task 1.1 code here
@@ -198,21 +199,30 @@ def our_kmeans(N, D, A, K):
 
 # You can create any kernel here
 
+def process_cluster(cluster_id, clusters, A, centroids, k2, D):
+    cluster_vectors_ids = [id for id, cid in enumerate(clusters) if cid == cluster_id]
+    closest_vectors_ids = our_knn(len(cluster_vectors_ids), D, A[cluster_vectors_ids], centroids[cluster_id], k2)
+    cluster_vectors_ids = cp.asarray(cluster_vectors_ids)
+    return cluster_vectors_ids[closest_vectors_ids]
+
+
 def our_ann(N, D, A, X, K):
+    # Ensure all inputs are CuPy arrays
     A = cp.asarray(A)
     X = cp.asarray(X)
     k1 = 5
     k2 = 100
     clusters, centroids = our_kmeans(N, D, A, K)
     k1_cluster_centers = our_knn(K, D, centroids, X, k1)
+
     candidates = cp.array([], dtype=cp.int32)
     for cluster_id in k1_cluster_centers:
-        cluster_vectors_ids = [id for id, cid in enumerate(clusters) if cid == cluster_id]
+        cluster_vectors_ids = cp.where(clusters == cluster_id)[0]  # Use CuPy for indexing
         closest_vectors_ids = our_knn(len(cluster_vectors_ids), D, A[cluster_vectors_ids], centroids[cluster_id], k2)
-        cluster_vectors_ids = cp.asarray(cluster_vectors_ids)
         candidates = cp.append(candidates, cluster_vectors_ids[closest_vectors_ids])
-    return candidates[our_knn(len(candidates), D, A[candidates], X, K)]
 
+    final_indices = our_knn(len(candidates), D, A[candidates], X, K)
+    return candidates[final_indices]
 
 # ------------------------------------------------------------------------------------------------
 # Test your code here
@@ -253,19 +263,29 @@ if __name__ == "__main__":
     # start = time.time()
     # test_kmeans()
     # print(time.time() - start)
+    bad_recall = 0
+    k = 20
 
-    start = time.time()
-    knn = test_knn()
-    cp.cuda.Device().synchronize()
-    print(f'time elapsed for knn: {time.time() - start}')
+    for _ in range(k):
 
-    start = time.time()
-    ann = test_ann()
-    cp.cuda.Device().synchronize()
-    print(f'time elapsed for ann: {time.time() - start}')
+        recall_rate_value = 0
+        start = time.time()
+        knn = test_knn()
+        cp.cuda.Device().synchronize()
+        print(f'time elapsed for knn: {time.time() - start}')
 
-    print(f"recall: {recall_rate(knn.tolist(), ann.tolist())}")
+        start = time.time()
+        ann = test_ann()
+        cp.cuda.Device().synchronize()
+        print(f'time elapsed for ann: {time.time() - start}')
 
+        recall_rate_value = recall_rate(knn.tolist(), ann.tolist())
+
+        if recall_rate_value < 0.7:
+            bad_recall += 1
+
+        print(f"recall: {recall_rate_value}")
+    print(f"Bad recall rate: {bad_recall/k}")
     # warm up
     '''for _ in range(10):
         test_knn()
