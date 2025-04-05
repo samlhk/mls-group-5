@@ -14,13 +14,17 @@ documents = [
     "Hummingbirds can hover in mid-air by rapidly flapping their wings."
 ]
 
+# change the hash to match your device
+embed_model_path = "offline_models/multilingual-e5-large-instruct/models--intfloat--multilingual-e5-large-instruct/snapshots/84344a23ee1820ac951bc365f1e91d094a911763"
+chat_model_path = "offline_models/facebook-opt-125m/models--facebook--opt-125m//snapshots/27dcfa74d334bc871f3234de431e71c6eeba5dd6/"
+
 # 1. Load embedding model
 EMBED_MODEL_NAME = "intfloat/multilingual-e5-large-instruct"
-embed_tokenizer = AutoTokenizer.from_pretrained(EMBED_MODEL_NAME)
-embed_model = AutoModel.from_pretrained(EMBED_MODEL_NAME)
+embed_tokenizer = AutoTokenizer.from_pretrained(embed_model_path)
+embed_model = AutoModel.from_pretrained(embed_model_path)
 
 # Basic Chat LLM
-chat_pipeline = pipeline("text-generation", model="facebook/opt-125m")
+chat_pipeline = pipeline("text-generation", model=chat_model_path)
 # Note: try this 1.5B model if you got enough GPU memory
 # chat_pipeline = pipeline("text-generation", model="Qwen/Qwen2.5-1.5B-Instruct")
 
