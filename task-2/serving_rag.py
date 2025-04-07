@@ -4,6 +4,8 @@ from transformers import AutoTokenizer, AutoModel, pipeline
 from fastapi import FastAPI
 import uvicorn
 from pydantic import BaseModel
+import threading
+import time
 
 app = FastAPI()
 
@@ -36,6 +38,26 @@ chat_pipeline = pipeline("text-generation", model=chat_model_path)
 # 1. Initialize a request queue
 # 2. Initialize a background thread to process the request (via calling the rag_pipeline function)
 # 3. Modify the predict function to put the request in the queue, instead of processing it immediately
+
+MAX_BATCH_SIZE = 10
+MAX_WAITING_TIME = 1
+request_queue = []
+response_queue = []
+
+def consume_request():
+    while True:
+        global request_queue
+        if len(request_queue) > 0:
+            request = request_queue[0]
+            result = rag_pipeline(request["payload"].query, request["payload"].k)
+            request_queue = request_queue[1:]
+            response_queue.append({"id": request["id"], "response": result})
+        time.sleep(0.5)
+
+
+consume_thread = threading.Thread(target=consume_request)
+consume_thread.daemon = True
+consume_thread.start()
 
 ### Step 3.2:
 # 1. Take up to MAX_BATCH_SIZE requests from the queue or wait until MAX_WAITING_TIME
@@ -71,7 +93,7 @@ def rag_pipeline(query: str, k: int = 2) -> str:
     
     # Step 3: LLM Output
     # max_length modified to increase the duration of the processing for performance testings
-    generated = chat_pipeline(prompt, max_length=1000, do_sample=True)[0]["generated_text"]
+    generated = chat_pipeline(prompt, max_length=50, do_sample=True)[0]["generated_text"]
     return generated
 
 # Define request model
@@ -81,12 +103,20 @@ class QueryRequest(BaseModel):
 
 @app.post("/rag")
 def predict(payload: QueryRequest):
-    result = rag_pipeline(payload.query, payload.k)
+    id = time.time()
+    request_queue.append({"id": id, "payload": payload})
+    while True:
+        response = [response for response in response_queue if response["id"] == id]
+        if len(response) > 0:
+            return response[0]
+        time.sleep(0.5)
+
+    # result = rag_pipeline(payload.query, payload.k)
     
-    return {
-        "query": payload.query,
-        "result": result,
-    }
+    # return {
+    #     "query": payload.query,
+    #     "result": result,
+    # }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
