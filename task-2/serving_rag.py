@@ -70,7 +70,8 @@ def rag_pipeline(query: str, k: int = 2) -> str:
     prompt = f"Question: {query}\nContext:\n{context}\nAnswer:"
     
     # Step 3: LLM Output
-    generated = chat_pipeline(prompt, max_length=50, do_sample=True)[0]["generated_text"]
+    # max_length modified to increase the duration of the processing for performance testings
+    generated = chat_pipeline(prompt, max_length=1000, do_sample=True)[0]["generated_text"]
     return generated
 
 # Define request model
