@@ -1,7 +1,7 @@
 #!/bin/bash
 
-URL="http://192.168.16.23:8000/rag"
-DATA='{"query": "What is the capital of France?"}'
+URL="http://129.215.18.52:8000/rag"
+DATA='{"query": "Which animals can hover in the air?"}'
 HEADER="Content-Type: application/json"
 
 # Number of concurrent requests to test

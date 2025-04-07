@@ -6,6 +6,9 @@ import uvicorn
 from pydantic import BaseModel
 import threading
 import time
+from torch.utils.data import Dataset
+import math
+import uuid
 
 app = FastAPI()
 
@@ -39,19 +42,41 @@ chat_pipeline = pipeline("text-generation", model=chat_model_path)
 # 2. Initialize a background thread to process the request (via calling the rag_pipeline function)
 # 3. Modify the predict function to put the request in the queue, instead of processing it immediately
 
-MAX_BATCH_SIZE = 10
-MAX_WAITING_TIME = 1
+MAX_BATCH_SIZE = 5
+MAX_WAITING_TIME = 2
 request_queue = []
 response_queue = []
 
+class QuestionDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        return self.data[i]
+
 def consume_request():
+    start = math.inf
+    freeze_start = False
+    global request_queue
     while True:
-        global request_queue
-        if len(request_queue) > 0:
-            request = request_queue[0]
-            result = rag_pipeline(request["payload"].query, request["payload"].k)
-            request_queue = request_queue[1:]
-            response_queue.append({"id": request["id"], "response": result})
+        queue_length = len(request_queue)
+        if queue_length > 0:
+            if not freeze_start:
+                start = time.time()
+                freeze_start = True
+            if queue_length >= MAX_BATCH_SIZE or time.time() - start > MAX_WAITING_TIME:
+                batch_size = min(queue_length, MAX_BATCH_SIZE)
+                requests = request_queue[:batch_size]
+                results = rag_pipeline_batched(requests)
+                request_queue = request_queue[batch_size:]
+                for id, result in enumerate(results):
+                    response_queue.append({"id": requests[id]["id"], "response": result[0]["generated_text"]})
+                start = math.inf
+                freeze_start = False
+                print(f'Completed a batch of: {batch_size} requests')
         time.sleep(0.5)
 
 
@@ -96,6 +121,30 @@ def rag_pipeline(query: str, k: int = 2) -> str:
     generated = chat_pipeline(prompt, max_length=50, do_sample=True)[0]["generated_text"]
     return generated
 
+def rag_pipeline_batched(requests):
+    prompts = []
+    for request in requests:
+        query = request["payload"].query
+
+        # Step 1: Input embedding
+        query_emb = get_embedding(query)
+        
+        # Step 2: Retrieval
+        retrieved_docs = retrieve_top_k(query_emb, request["payload"].k)
+        
+        # Construct the prompt from query + retrieved docs
+        context = "\n".join(retrieved_docs)
+        prompt = f"Question: {query}\nContext:\n{context}\nAnswer:"
+
+        prompts.append(prompt)
+    
+    dataset = QuestionDataset(prompts)
+    
+    # Step 3: LLM Output
+    # max_length modified to increase the duration of the processing for performance testings
+    generated = chat_pipeline(dataset, batch_size=len(requests), max_length=50, do_sample=True)
+    return generated
+
 # Define request model
 class QueryRequest(BaseModel):
     query: str
@@ -103,7 +152,7 @@ class QueryRequest(BaseModel):
 
 @app.post("/rag")
 def predict(payload: QueryRequest):
-    id = time.time()
+    id = uuid.uuid4().hex
     request_queue.append({"id": id, "payload": payload})
     while True:
         response = [response for response in response_queue if response["id"] == id]
