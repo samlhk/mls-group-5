@@ -1,6 +1,6 @@
 #!/bin/bash
 
-URL="http://129.215.18.52:8000/rag"
+URL="http://192.168.47.132:8000/rag"
 DATA='{"query": "Which animals can hover in the air?"}'
 HEADER="Content-Type: application/json"
 
@@ -13,6 +13,7 @@ for CONCURRENCY in "${CONCURRENCY_LEVELS[@]}"; do
 
   for ((round = 1; round <= ROUNDS; round++)); do
     echo "  Round $round"
+    START_TIME=$(date +%s)
 
     for ((i = 1; i <= CONCURRENCY; i++)); do
       curl -s -o /dev/null -w "%{http_code} " -X POST "$URL" \
@@ -20,6 +21,9 @@ for CONCURRENCY in "${CONCURRENCY_LEVELS[@]}"; do
     done
 
     wait  # Wait for all concurrent requests to finish
+    END_TIME=$(date +%s)
+    ELAPSED=$((END_TIME - START_TIME))
+    echo "Finished $CONCURRENCY concurrent requests in $ELAPSED seconds"
     echo  # New line after response codes
   done
 

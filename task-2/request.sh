@@ -1,6 +1,6 @@
 #!/bin/bash
 
-URL="http://129.215.18.52:8000/rag"
+URL="http://192.168.47.132:8000/rag"
 DATA='{"query": "Which animals can hover in the air?"}'
 HEADER="Content-Type: application/json"
 
