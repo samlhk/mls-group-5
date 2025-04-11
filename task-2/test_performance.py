@@ -52,3 +52,4 @@ for round in range(rounds):
 
 plt.hist(latencies)
 plt.savefig('latency_batch.pdf')
+
