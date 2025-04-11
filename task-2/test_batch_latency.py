@@ -6,7 +6,7 @@ import numpy as np
 url = "http://192.168.16.21:8002/rag"
 query = {"query": "Which animals can hover in the air?"}
 
-concurrency_level = 32
+concurrency_level = 8
 rounds = 20
 
 batch_latencies = np.array([])
@@ -33,4 +33,5 @@ for round in range(rounds):
 
 print(f'Average batch latency: {np.round(batch_latencies.mean() * 1000)} milliseconds')
 print(f'Average request latency: {np.round(batch_latencies.mean() * 1000 / concurrency_level)} milliseconds')
+
 
