@@ -42,10 +42,10 @@ chat_pipeline = pipeline("text-generation", model=chat_model_path)
 # 2. Initialize a background thread to process the request (via calling the rag_pipeline function)
 # 3. Modify the predict function to put the request in the queue, instead of processing it immediately
 
-MAX_BATCH_SIZE = 8
+MAX_BATCH_SIZE = 64
 MAX_WAITING_TIME = 1
 request_queue = []
-response_queue = []
+response_queue = {}
 
 class QuestionDataset(Dataset):
     def __init__(self, data):
@@ -73,7 +73,7 @@ def consume_request():
                 results = rag_pipeline_batched(requests)
                 request_queue = request_queue[batch_size:]
                 for id, result in enumerate(results):
-                    response_queue.append({"id": requests[id]["id"], "response": result[0]["generated_text"]})
+                    response_queue[requests[id]["id"]] = result[0]["generated_text"]
                 start = math.inf
                 freeze_start = False
                 print(f'Completed a batch of: {batch_size} requests')
@@ -155,17 +155,19 @@ def predict(payload: QueryRequest):
     id = uuid.uuid4().hex
     request_queue.append({"id": id, "payload": payload})
     while True:
-        response = [response for response in response_queue if response["id"] == id]
-        if len(response) > 0:
-            return response[0]
+        response = response_queue.get(id)
+        if response:
+            return response
         time.sleep(0.5)
 
-    # result = rag_pipeline(payload.query, payload.k)
+@app.post("/rag_basic")
+def predict(payload: QueryRequest):
+    result = rag_pipeline(payload.query, payload.k)
     
-    # return {
-    #     "query": payload.query,
-    #     "result": result,
-    # }
+    return {
+        "query": payload.query,
+        "result": result,
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8002)
