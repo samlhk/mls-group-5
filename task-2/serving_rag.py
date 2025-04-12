@@ -42,7 +42,7 @@ chat_pipeline = pipeline("text-generation", model=chat_model_path)
 # 2. Initialize a background thread to process the request (via calling the rag_pipeline function)
 # 3. Modify the predict function to put the request in the queue, instead of processing it immediately
 
-MAX_BATCH_SIZE = 64
+MAX_BATCH_SIZE = 32
 MAX_WAITING_TIME = 1
 request_queue = []
 response_queue = {}
