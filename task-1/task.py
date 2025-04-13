@@ -139,28 +139,26 @@ def our_kmeans(N, D, A, K):
     max_iterations = 10
     A = cp.asarray(A)
     result = cp.zeros(N, dtype=int)
-    new_result = cp.zeros(N, dtype=int)
+    # new_result = cp.zeros(N, dtype=int)
     # intialise centroids
     centroids = A[cp.random.choice(N, K, replace=False)]
     for _ in range(max_iterations):
         # assign
-        # TODO directly applying distance_cosine(A, centroid) is efficient but currently doesn't work for distance_l2 for some reason, needs fixing
         distances = cp.zeros((N, K))
         for k in range(K):
             # Vectorized distance calculation between all points and current centroid
             distances[:, k] = distance_l2(A, centroids[k])
-        new_result = cp.argmin(distances, axis=1)
+        result = cp.argmin(distances, axis=1)
 
         # convergence?
-        if cp.all(new_result == result):
-            break
-        result = new_result.copy()
+        # if cp.all(new_result == result):
+        #     break
+        # result = new_result.copy()
 
         # update
         for idx, _ in enumerate(centroids):
             centroids[idx] = cp.mean(A[result == idx], axis=0)
 
-    # TODO this should only return results but we also need the centroids from kmeans so it's here for now
     return result, centroids
 
 '''def kmeans(N, D, A, K, max_iters=100, tolerance=1e-4):
@@ -198,13 +196,6 @@ def our_kmeans(N, D, A, K):
 # ------------------------------------------------------------------------------------------------
 
 # You can create any kernel here
-
-def process_cluster(cluster_id, clusters, A, centroids, k2, D):
-    cluster_vectors_ids = [id for id, cid in enumerate(clusters) if cid == cluster_id]
-    closest_vectors_ids = our_knn(len(cluster_vectors_ids), D, A[cluster_vectors_ids], centroids[cluster_id], k2)
-    cluster_vectors_ids = cp.asarray(cluster_vectors_ids)
-    return cluster_vectors_ids[closest_vectors_ids]
-
 
 def our_ann(N, D, A, X, K):
     # Ensure all inputs are CuPy arrays
@@ -260,32 +251,42 @@ def recall_rate(list1, list2):
     return len(set(list1) & set(list2)) / len(list1)
 
 if __name__ == "__main__":
-    # start = time.time()
-    # test_kmeans()
-    # print(time.time() - start)
+    # Set file path to empty string to generate fresh data
+    N, D, A, X, K = testdata_knn("")
     bad_recall = 0
-    k = 20
+    k = 5
+
+    knn_times = np.array([])
+    ann_times = np.array([])
 
     for _ in range(k):
-
         recall_rate_value = 0
-        start = time.time()
-        knn = test_knn()
-        cp.cuda.Device().synchronize()
-        print(f'time elapsed for knn: {time.time() - start}')
 
         start = time.time()
-        ann = test_ann()
+        knn_result = our_knn(N, D, A, X, K)
         cp.cuda.Device().synchronize()
-        print(f'time elapsed for ann: {time.time() - start}')
+        elapsed = time.time() - start
+        print(f'knn result: {knn_result}')
+        print(f'time elapsed for knn: {elapsed}')
+        knn_times = np.append(knn_times, elapsed)
 
-        recall_rate_value = recall_rate(knn.tolist(), ann.tolist())
+        start = time.time()
+        ann_result = our_ann(N, D, A, X, K)
+        cp.cuda.Device().synchronize()
+        elapsed = time.time() - start
+        print(f'ann result: {ann_result}')
+        print(f'time elapsed for ann: {elapsed}')
+        ann_times = np.append(ann_times, elapsed)
+
+        recall_rate_value = recall_rate(knn_result.tolist(), ann_result.tolist())
 
         if recall_rate_value < 0.7:
             bad_recall += 1
 
         print(f"recall: {recall_rate_value}")
     print(f"Bad recall rate: {bad_recall/k}")
+    print(f'Average knn processing time: {knn_times.mean()}')
+    print(f'Average ann processing time: {ann_times.mean()}')
     # warm up
     '''for _ in range(10):
         test_knn()

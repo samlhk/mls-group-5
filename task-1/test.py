@@ -41,6 +41,11 @@ def testdata_knn(test_file):
         A = np.random.randn(N, D)
         X = np.random.randn(D)
         K = 10
+        with open('A.txt', 'w') as f:
+            np.savetxt(f, A)
+        with open('X.txt', 'w') as f:
+            np.savetxt(f, X)
+        print('Completed generating and storing data')
         return N, D, A, X, K
     else:
         # read n, d, a_file, x_file, k from test_file.json
