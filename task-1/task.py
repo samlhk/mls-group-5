@@ -190,12 +190,59 @@ def our_kmeans(N, D, A, K):
         prev_centroids = centroids.copy()
 
     return labels'''
+    
+def simple_kmeans(A, K, max_iters=3):
+    """Simplified k-means used by our_ann_optimised"""
+    centroids = A[cp.random.choice(len(A), K, replace=False)]
+    
+    for _ in range(max_iters):
+        distances = ((A[:, None, :] - centroids[None, :, :])**2).sum(axis=2)
+        clusters = cp.argmin(distances, axis=1)
+        
+        for k in range(K):
+            mask = clusters == k
+            if cp.any(mask):
+                centroids[k] = A[mask].mean(axis=0)
+    
+    return clusters, centroids
 
 # ------------------------------------------------------------------------------------------------
 # Your Task 2.2 code here
 # ------------------------------------------------------------------------------------------------
 
 # You can create any kernel here
+
+
+def our_ann_optimized(N, D, A, X, K, k1=5, k2=80, kmeans_iters=3):
+    """Optimized ANN with better recall"""
+    A = cp.asarray(A, dtype=cp.float32)
+    X = cp.asarray(X, dtype=cp.float32)
+    
+    if X.ndim == 1:
+        X = X.reshape(1, -1)
+
+    clusters, centroids = simple_kmeans(A, k1, kmeans_iters)
+
+    query_cluster_dists = ((X[:, None, :] - centroids[None, :, :])**2).sum(axis=2)
+    nearest_clusters = cp.argsort(query_cluster_dists, axis=1)[:, :k1]
+    
+    candidates = []
+    for i in range(X.shape[0]):
+        for c in nearest_clusters[i]:
+            cluster_points = cp.where(clusters == c)[0]
+            if len(cluster_points) > 0:
+                dists = ((A[cluster_points] - X[i])**2).sum(axis=1)
+                top_k = min(k2, len(cluster_points))
+                candidates.append(cluster_points[cp.argpartition(dists, top_k-1)[:top_k]])
+    
+    if not candidates:
+        return cp.array([], dtype=cp.int32)
+    
+    candidates = cp.unique(cp.concatenate(candidates))
+    
+    dists = ((A[candidates] - X)**2).sum(axis=1)
+    top_k = min(K, len(candidates))
+    return candidates[cp.argpartition(dists, top_k-1)[:top_k]]
 
 def our_ann(N, D, A, X, K):
     # Ensure all inputs are CuPy arrays
@@ -253,40 +300,73 @@ def recall_rate(list1, list2):
 if __name__ == "__main__":
     # Set file path to empty string to generate fresh data
     N, D, A, X, K = testdata_knn("")
-    bad_recall = 0
-    k = 5
+    bad_recall_count = 0
+    bad_recall_optimized_count = 0
+    num_trials = 10  # More descriptive than 'k'
+    
+    # Arrays to store metrics
+    knn_times = []
+    ann_times = []
+    ann_optimized_times = []
+    recall_rates = []
+    recall_rates_optimized = []
 
-    knn_times = np.array([])
-    ann_times = np.array([])
-
-    for _ in range(k):
-        recall_rate_value = 0
-
+    for _ in range(num_trials):
+        # KNN (ground truth)
         start = time.time()
         knn_result = our_knn(N, D, A, X, K)
         cp.cuda.Device().synchronize()
-        elapsed = time.time() - start
-        print(f'knn result: {knn_result}')
-        print(f'time elapsed for knn: {elapsed}')
-        knn_times = np.append(knn_times, elapsed)
+        knn_time = time.time() - start
+        knn_times.append(knn_time)
+        print(f'KNN result: {knn_result}')
+        print(f'Time elapsed for KNN: {knn_time:.4f}s')
 
+        # Original ANN
         start = time.time()
         ann_result = our_ann(N, D, A, X, K)
         cp.cuda.Device().synchronize()
-        elapsed = time.time() - start
-        print(f'ann result: {ann_result}')
-        print(f'time elapsed for ann: {elapsed}')
-        ann_times = np.append(ann_times, elapsed)
+        ann_time = time.time() - start
+        ann_times.append(ann_time)
+        print(f'ANN result: {ann_result}')
+        print(f'Time elapsed for ANN: {ann_time:.4f}s')
+        
+        # Optimized ANN
+        start = time.time()
+        ann_optimized_result = our_ann_optimized(N, D, A, X, K)
+        cp.cuda.Device().synchronize()
+        ann_optimized_time = time.time() - start
+        ann_optimized_times.append(ann_optimized_time)
+        print(f'Optimized ANN result: {ann_optimized_result}')
+        print(f'Time elapsed for Optimized ANN: {ann_optimized_time:.4f}s')
 
-        recall_rate_value = recall_rate(knn_result.tolist(), ann_result.tolist())
+        # Calculate recall rates
+        current_recall = recall_rate(knn_result.tolist(), ann_result.tolist())
+        current_recall_optimized = recall_rate(knn_result.tolist(), ann_optimized_result.tolist())
+        recall_rates.append(current_recall)
+        recall_rates_optimized.append(current_recall_optimized)
+        
+        # Count bad recalls (below 0.7 threshold)
+        if current_recall < 0.7:
+            bad_recall_count += 1
+        if current_recall_optimized < 0.7:
+            bad_recall_optimized_count += 1
 
-        if recall_rate_value < 0.7:
-            bad_recall += 1
+        print(f"Recall rate (original): {current_recall:.4f}")
+        print(f"Recall rate (optimized): {current_recall_optimized:.4f}\n")
 
-        print(f"recall: {recall_rate_value}")
-    print(f"Bad recall rate: {bad_recall/k}")
-    print(f'Average knn processing time: {knn_times.mean()}')
-    print(f'Average ann processing time: {ann_times.mean()}')
+    # Calculate statistics
+    bad_recall_rate = bad_recall_count / num_trials
+    bad_recall_rate_optimized = bad_recall_optimized_count / num_trials
+    
+    print("\n=== Final Results ===")
+    print(f"Bad recall rate (original): {bad_recall_rate:.4f} ({bad_recall_count}/{num_trials} trials)")
+    print(f"Bad recall rate (optimized): {bad_recall_rate_optimized:.4f} ({bad_recall_optimized_count}/{num_trials} trials)")
+    print(f"\nAverage recall rate (original): {np.mean(recall_rates):.4f} ± {np.std(recall_rates):.4f}")
+    print(f"Average recall rate (optimized): {np.mean(recall_rates_optimized):.4f} ± {np.std(recall_rates_optimized):.4f}")
+    print(f"\nAverage processing time:")
+    print(f"- KNN: {np.mean(knn_times):.4f}s ± {np.std(knn_times):.4f}")
+    print(f"- Original ANN: {np.mean(ann_times):.4f}s ± {np.std(ann_times):.4f}")
+    print(f"- Optimized ANN: {np.mean(ann_optimized_times):.4f}s ± {np.std(ann_optimized_times):.4f}")
     # warm up
     '''for _ in range(10):
         test_knn()
