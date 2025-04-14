@@ -75,6 +75,11 @@ with open('data.npy', 'wb') as f:
 # with open('data.npy', 'rb') as f:
 #     basic_latencies = np.load(f)
 #     batched_latencies = np.load(f)
+#     multi_instance_latencies = np.load(f)
+
+print(f"99 percentile latency for original pipeline: {np.percentile(basic_latencies, 99)}")
+print(f"99 percentile latency for batched pipeline: {np.percentile(batched_latencies, 99)}")
+print(f"99 percentile latency for multi-instance pipeline: {np.percentile(multi_instance_latencies, 99)}")
 
 plt.ecdf(basic_latencies, label='Original RAG Pipeline')
 plt.ecdf(batched_latencies, label='Batched RAG Pipeline')
