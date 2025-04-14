@@ -1,4 +1,4 @@
-# MLS Group 5 code and materials
+# MLS code and materials
  This repository is a clone of the MLS instructions repo with our implementation for the tasks. Below describe the relevant files we implemented and how to run them. These instructions assume you are running the code in the teaching cluster and have set up the conda environment based on the task specific README.mds (these are not modified by us).
 
  ## Task 1
