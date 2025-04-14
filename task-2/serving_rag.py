@@ -9,6 +9,8 @@ import time
 from torch.utils.data import Dataset
 import math
 import uuid
+import random
+import requests
 
 app = FastAPI()
 
@@ -168,6 +170,20 @@ def predict(payload: QueryRequest):
         "query": payload.query,
         "result": result,
     }
+
+@app.post("/rag_multi_instance")
+def predict(payload: QueryRequest):
+    id = uuid.uuid4().hex
+    if random.random() > 0.5:    
+        request_queue.append({"id": id, "payload": payload})
+        while True:
+            response = response_queue.get(id)
+            if response:
+                return response
+            time.sleep(0.5)
+    else:
+        res = requests.post("http://192.168.47.132:8002/rag", json={"query": payload.query})
+        return res.json()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8002)

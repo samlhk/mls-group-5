@@ -4,7 +4,7 @@ import requests
 import numpy as np
 import matplotlib.pyplot as plt
 
-base_url = "http://192.168.47.132:8002/"
+base_url = "http://192.168.16.21:8002/"
 query = {"query": "Which animals can hover in the air?"}
 
 endpoint = ""
@@ -14,6 +14,7 @@ peak_concurrency_level = 64
 
 basic_latencies = []
 batched_latencies = []
+multi_instance_latencies = []
 
 def send_request():
     global latencies
@@ -23,13 +24,15 @@ def send_request():
     assert res.status_code == 200
     if endpoint == "rag_basic":
         basic_latencies.append(elapsed)
-    else:
+    elif endpoint == "rag":
         batched_latencies.append(elapsed)
+    elif endpoint == "rag_multi_instance":
+        multi_instance_latencies.append(elapsed)
 
-for case in ["rag_basic", "rag"]:
+for case in ["rag_basic", "rag", "rag_multi_instance"]:
     endpoint = case
     throughputs = np.array([])
-    print(f"Evaluating {'basic' if case == 'rag_basic' else 'batched'} pipeline")
+    print(f"Evaluating {'basic' if case == 'rag_basic' else 'batched' if case == 'rag' else 'multi instance'} pipeline")
     for round in range(rounds):
         print(f'Round {round + 1}: Testing performance')
         rps = 16
@@ -67,6 +70,7 @@ for case in ["rag_basic", "rag"]:
 with open('data.npy', 'wb') as f:
     np.save(f, basic_latencies)
     np.save(f, batched_latencies)
+    np.save(f, multi_instance_latencies)
 
 # with open('data.npy', 'rb') as f:
 #     basic_latencies = np.load(f)
@@ -74,6 +78,7 @@ with open('data.npy', 'wb') as f:
 
 plt.ecdf(basic_latencies, label='Original RAG Pipeline')
 plt.ecdf(batched_latencies, label='Batched RAG Pipeline')
+plt.ecdf(multi_instance_latencies, label='Multi-instance RAG Pipeline')
 
 plt.legend()
 plt.xlabel('Latency (s)')

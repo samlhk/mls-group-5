@@ -23,7 +23,7 @@
 
  ### serving_rag.py
 
- Starts RAG API server. Before running, modify `embed_model_path` and `chat_model_path` with the correct hash values. You can find these by checking the path after running `download.py`. Note that the `/rag` endpoint implements the request queue and batching while the `/rag_basic` endpoint is the original implementation.
+ Starts RAG API server. Before running, modify `embed_model_path` and `chat_model_path` with the correct hash values. You can find these by checking the path after running `download.py`. The `/rag_basic` endpoint is the original implementation, the `/rag` endpoint implements the request queue and batching and the `/rag_multi_instance` endpoint implements a multi server pipeline (to run this, update the url in the handler function with the IP address of the secondary machine).
 
  ```
  python serving_rag.py
