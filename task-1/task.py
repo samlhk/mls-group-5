@@ -107,92 +107,9 @@ def our_knn(N, D, A, X, K):
 # def distance_kernel(X, Y, D):
 #     pass
 
-def our_kmeans(N, D, A, K):
-    '''
-    1. Initialize:
-        - Randomly select K points from dataset as initial centroids
-
-    2. REPEAT:
-        a. Assignment step:
-            - For each data point:
-                - Calculate distance to each centroid
-                - Assign point to closest centroid's cluster
     
-        b. Update step:
-            - For each cluster:
-                - Calculate mean of all points in cluster
-                - Set new centroid position to cluster mean
-
-    3. UNTIL:
-        - Centroids no longer move significantly OR
-        - Maximum iterations reached
-
-    Input:
-        N: Number of vectors
-        D: Dimension of vectors
-        A[N, D]: A collection of vectors
-        K: number of clusters
-
-    Output:
-        Result[N]: cluster ID for each vector
-    '''
-    max_iterations = 10
-    A = cp.asarray(A)
-    result = cp.zeros(N, dtype=int)
-    # new_result = cp.zeros(N, dtype=int)
-    # intialise centroids
-    centroids = A[cp.random.choice(N, K, replace=False)]
-    for _ in range(max_iterations):
-        # assign
-        distances = cp.zeros((N, K))
-        for k in range(K):
-            # Vectorized distance calculation between all points and current centroid
-            distances[:, k] = distance_l2(A, centroids[k])
-        result = cp.argmin(distances, axis=1)
-
-        # convergence?
-        # if cp.all(new_result == result):
-        #     break
-        # result = new_result.copy()
-
-        # update
-        for idx, _ in enumerate(centroids):
-            centroids[idx] = cp.mean(A[result == idx], axis=0)
-
-    return result, centroids
-
-'''def kmeans(N, D, A, K, max_iters=100, tolerance=1e-4):
-    # Initialize
-    A = cp.asarray(A)
-    centroids = A[cp.random.choice(N, K, replace=False)]  # Randomly initialize centroids
-    prev_centroids = cp.zeros_like(centroids)
-    labels = cp.zeros(N, dtype=cp.int32)
-
-    for _ in range(max_iters):
-        # Assignment step: Assign each point to the nearest centroid
-        for i in range(N):
-            distances = cp.array([distance_cosine(A[i], centroids[k]) for k in range(K)])
-            labels[i] = cp.argmin(distances)  # Assign to closest centroid
-        
-        # Update step: Recompute centroids as the mean of the points in each cluster
-        for k in range(K):
-            cluster_points = A[labels == k]
-            if cluster_points.shape[0] > 0:  # Avoid division by zero
-                new_centroid = cp.mean(cluster_points, axis=0)
-                centroids[k] = new_centroid
-
-        # Check for convergence (if centroids have moved less than the tolerance)
-        centroid_shift = cp.linalg.norm(centroids - prev_centroids)
-        if centroid_shift < tolerance:
-            break
-        
-        # Save the current centroids for the next iteration
-        prev_centroids = centroids.copy()
-
-    return labels'''
-    
-def simple_kmeans(A, K, max_iters=3):
-    """Simplified k-means used by our_ann_optimised"""
+def our_kmeans(A, K, max_iters=3):
+    """Simplified k-means used by our_ann"""
     centroids = A[cp.random.choice(len(A), K, replace=False)]
     
     for _ in range(max_iters):
@@ -213,15 +130,14 @@ def simple_kmeans(A, K, max_iters=3):
 # You can create any kernel here
 
 
-def our_ann_optimized(N, D, A, X, K, k1=5, k2=80, kmeans_iters=3):
-    """Optimized ANN with better recall"""
+def our_ann(N, D, A, X, K, k1=10, k2=120, kmeans_iters=3):
     A = cp.asarray(A, dtype=cp.float32)
     X = cp.asarray(X, dtype=cp.float32)
     
     if X.ndim == 1:
         X = X.reshape(1, -1)
 
-    clusters, centroids = simple_kmeans(A, k1, kmeans_iters)
+    clusters, centroids = our_kmeans(A, k1, kmeans_iters)
 
     query_cluster_dists = ((X[:, None, :] - centroids[None, :, :])**2).sum(axis=2)
     nearest_clusters = cp.argsort(query_cluster_dists, axis=1)[:, :k1]
@@ -243,24 +159,6 @@ def our_ann_optimized(N, D, A, X, K, k1=5, k2=80, kmeans_iters=3):
     dists = ((A[candidates] - X)**2).sum(axis=1)
     top_k = min(K, len(candidates))
     return candidates[cp.argpartition(dists, top_k-1)[:top_k]]
-
-def our_ann(N, D, A, X, K):
-    # Ensure all inputs are CuPy arrays
-    A = cp.asarray(A)
-    X = cp.asarray(X)
-    k1 = 5
-    k2 = 100
-    clusters, centroids = our_kmeans(N, D, A, K)
-    k1_cluster_centers = our_knn(K, D, centroids, X, k1)
-
-    candidates = cp.array([], dtype=cp.int32)
-    for cluster_id in k1_cluster_centers:
-        cluster_vectors_ids = cp.where(clusters == cluster_id)[0]  # Use CuPy for indexing
-        closest_vectors_ids = our_knn(len(cluster_vectors_ids), D, A[cluster_vectors_ids], centroids[cluster_id], k2)
-        candidates = cp.append(candidates, cluster_vectors_ids[closest_vectors_ids])
-
-    final_indices = our_knn(len(candidates), D, A[candidates], X, K)
-    return candidates[final_indices]
 
 # ------------------------------------------------------------------------------------------------
 # Test your code here
@@ -298,18 +196,13 @@ def recall_rate(list1, list2):
     return len(set(list1) & set(list2)) / len(list1)
 
 if __name__ == "__main__":
-    # Set file path to empty string to generate fresh data
     N, D, A, X, K = testdata_knn("")
     bad_recall_count = 0
-    bad_recall_optimized_count = 0
-    num_trials = 10  # More descriptive than 'k'
+    num_trials = 10
     
-    # Arrays to store metrics
     knn_times = []
     ann_times = []
-    ann_optimized_times = []
     recall_rates = []
-    recall_rates_optimized = []
 
     for _ in range(num_trials):
         # KNN (ground truth)
@@ -321,7 +214,6 @@ if __name__ == "__main__":
         print(f'KNN result: {knn_result}')
         print(f'Time elapsed for KNN: {knn_time:.4f}s')
 
-        # Original ANN
         start = time.time()
         ann_result = our_ann(N, D, A, X, K)
         cp.cuda.Device().synchronize()
@@ -330,76 +222,22 @@ if __name__ == "__main__":
         print(f'ANN result: {ann_result}')
         print(f'Time elapsed for ANN: {ann_time:.4f}s')
         
-        # Optimized ANN
-        start = time.time()
-        ann_optimized_result = our_ann_optimized(N, D, A, X, K)
-        cp.cuda.Device().synchronize()
-        ann_optimized_time = time.time() - start
-        ann_optimized_times.append(ann_optimized_time)
-        print(f'Optimized ANN result: {ann_optimized_result}')
-        print(f'Time elapsed for Optimized ANN: {ann_optimized_time:.4f}s')
 
-        # Calculate recall rates
         current_recall = recall_rate(knn_result.tolist(), ann_result.tolist())
-        current_recall_optimized = recall_rate(knn_result.tolist(), ann_optimized_result.tolist())
         recall_rates.append(current_recall)
-        recall_rates_optimized.append(current_recall_optimized)
         
-        # Count bad recalls (below 0.7 threshold)
         if current_recall < 0.7:
             bad_recall_count += 1
-        if current_recall_optimized < 0.7:
-            bad_recall_optimized_count += 1
 
         print(f"Recall rate (original): {current_recall:.4f}")
-        print(f"Recall rate (optimized): {current_recall_optimized:.4f}\n")
 
     # Calculate statistics
     bad_recall_rate = bad_recall_count / num_trials
-    bad_recall_rate_optimized = bad_recall_optimized_count / num_trials
     
     print("\n=== Final Results ===")
-    print(f"Bad recall rate (original): {bad_recall_rate:.4f} ({bad_recall_count}/{num_trials} trials)")
-    print(f"Bad recall rate (optimized): {bad_recall_rate_optimized:.4f} ({bad_recall_optimized_count}/{num_trials} trials)")
+    print(f"Bad recall rate: {bad_recall_rate:.4f} ({bad_recall_count}/{num_trials} trials)")
     print(f"\nAverage recall rate (original): {np.mean(recall_rates):.4f} ± {np.std(recall_rates):.4f}")
-    print(f"Average recall rate (optimized): {np.mean(recall_rates_optimized):.4f} ± {np.std(recall_rates_optimized):.4f}")
     print(f"\nAverage processing time:")
     print(f"- KNN: {np.mean(knn_times):.4f}s ± {np.std(knn_times):.4f}")
-    print(f"- Original ANN: {np.mean(ann_times):.4f}s ± {np.std(ann_times):.4f}")
-    print(f"- Optimized ANN: {np.mean(ann_optimized_times):.4f}s ± {np.std(ann_optimized_times):.4f}")
-    # warm up
-    '''for _ in range(10):
-        test_knn()
-
-    times = []
-    for i in range(50):
-        start = time.time()
-        test_knn()
-        times.append(time.time() - start)
-        if i % 10 == 0:
-            print(time.time() - start)
-    # plt.plot([i for i in range(50)], times, label='gpu')
-    print(f"cp avg: {sum(times) / len(times)}")
-    
-    times = []
-    for i in range(50):
-        start = time.time()
-        test_knn_cpu()
-        times.append(time.time() - start)
-        if i % 10 == 0:
-            print(time.time() - start)
-    print(f"np avg: {sum(times) / len(times)}")'''
-
-    #plt.legend()
-    #plt.show()
-    
-
-    # times = np.array([])
-    # for i in range(10):
-    #     a = np.random.randn(32768)
-    #     b = np.random.randn(32768)
-    #     start = time.time()
-    #     distance_cosine(a, b)
-    #     times = np.append(times, time.time() - start)
-    
-    # print(f'average time: {times.mean()}')
+    print(f"- ANN: {np.mean(ann_times):.4f}s ± {np.std(ann_times):.4f}")
+    print(f"- Difference in KNN and ANN: {np.mean(knn_times) - np.mean(ann_times):.4f}s")
